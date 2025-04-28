@@ -1,0 +1,66 @@
+name: "Delete Scratch Pool"
+description: "Delete scratch pools"
+inputs:
+  devhub:
+    description: "Devhub alias or username"
+    required: true
+  deleteJobType:
+    description: "Valid values: allscratchorgs, inprogressonly, orphans, unassigned"
+    required: true
+  isCiPool:
+    description: "If the org to delete is a CI pool or not"
+    required: true
+  poolTag:
+    description: "Tag of the pool to be deleted"
+    required: false
+runs:
+  using: composite
+  steps:
+    - name: "Delete Pool"
+      continue-on-error: true
+      shell: bash
+      run: |
+        poolTag="${POOL_TAG}"
+        deleteJobType="${DELETE_JOB_TYPE}"
+        command=("sfp" "pool" "delete" "--targetdevhubusername" "${DEVHUB_ALIAS}")
+
+        if [ -z "$poolTag" ]; then
+          echo "No tag provided"
+        else
+          echo "Run delete jobs on the pool $poolTag"
+          command+=("--tag" "$poolTag")
+        fi
+
+        case "$deleteJobType" in
+          'allscratchorgs')
+            if [[ -z "$poolTag" || "${IS_CI_POOL}" == "false" ]]; then
+              echo "::error title=Cannot delete all scratch orgs::Cannot delete all scratch orgs in dev pool through action. This must be done manually"
+              exit 1
+            fi
+            command+=("--allscratchorgs")
+            ;;
+
+          'inprogressonly')
+            command+=("--inprogressonly")
+            ;;
+
+          'orphans')
+            command+=("--orphans")
+            ;;
+
+          'unassigned')
+            command+=("--unassigned")
+            ;;
+
+          *)
+            echo "::error title=Missing input::deleteJobType did not match any of the legal input values. deleteJobType => $deleteJobType"
+            exit 1
+        esac
+
+        echo "Executing command: ${command[*]}"
+        "${command[@]}"
+      env:
+        POOL_TAG: ${{ inputs.poolTag }}
+        DELETE_JOB_TYPE: ${{ inputs.deleteJobType }}
+        DEVHUB_ALIAS: ${{ inputs.devhub }}
+        IS_CI_POOL: ${{ inputs.isCiPool }}
