@@ -11,4 +11,8 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "05:00"
-      timezone: "Europe/Berlin"  
+      timezone: "Europe/Berlin"
+    groups:
+      gha:
+        patterns:
+          - "*"
